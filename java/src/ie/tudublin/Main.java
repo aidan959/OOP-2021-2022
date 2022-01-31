@@ -13,13 +13,13 @@ public class Main
         System.out.println("Hello world");
 
         Animal misty = new Animal("Misty");
-        Animal lucy = new Animal("Lucy");
+        Animal greg = new Animal("Lucy");
 
-        lucy = misty;
-        misty.setName("Tara");
+        greg = misty;
+        misty.setName("Greg");
 
         System.out.println(misty);
-        System.out.println(lucy);
+        System.out.println(greg);
 
         
         Cat cat = new Cat("Ginger");
