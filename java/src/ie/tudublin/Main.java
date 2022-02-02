@@ -33,10 +33,16 @@ public class Main
     }
     public static void main(String[] args)
     {
+<<<<<<< Updated upstream
         helloProcessing();
 
         // Tara Misty
         // Tara Tara
         
     }
+=======
+        // helloProcessing();
+        System.out.println("Alri");
+        }
+>>>>>>> Stashed changes
 }
