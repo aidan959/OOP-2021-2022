@@ -7,16 +7,20 @@ public class HelloProcessing extends PApplet
 
 	public void settings()
 	{
-		size(500, 500);
+		size(500, 500, P3D);
 	}
-
+	int dim;
 	public void setup() {
 		colorMode(HSB);
 		background(0);
-
-		x1 = random(0, width);
+		dim = width/2;
+		colorMode(HSB, 360, 100, 100);
+		noStroke();
+		ellipseMode(RADIUS);
+		frameRate(60);
+		x1 = random(0, width*2);
 		x2 = random(0, width);
-		y1 = random(0, height);
+		y1 = random(0, height *2);
 		y2 = random(0, height);
 
 		float range = 5;
@@ -33,8 +37,17 @@ public class HelloProcessing extends PApplet
 	float x1, y1, x2, y2;
 	float x1dir, x2dir, y1dir, y2dir;
 	float c = 0;
-	
-	public void draw()
+	public void draw(){
+		noFill();
+		background(204);
+		camera(70.0f, 35.0f, 120.0f, 50.0f, 50.0f, 0.0f, 
+			0.0f, 1.0f, 0.0f);
+		translate(50, 50, 0);
+		rotateX(-PI/6);
+		rotateY(PI/3);
+		box(45);
+	}
+	public void draw1()
 	{	
 		strokeWeight(2);
 		stroke(c, 255, 255);
@@ -64,4 +77,13 @@ public class HelloProcessing extends PApplet
 			y2dir = - y2dir;
 		}
 	}
+	void drawGradient(float x, float y) {
+		int radius = dim/2;
+		float h = random(0, 360);
+		for (int r = radius; r > 0; --r) {
+		  fill(h, 90, 90);
+		  ellipse(x, y, r, r);
+		  h = (h + 1) % 360;
+		}
+	  }
 }
