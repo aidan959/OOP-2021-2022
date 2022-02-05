@@ -7,7 +7,11 @@ public class Main
 		String[] a = {"MAIN"};
         processing.core.PApplet.runSketch( a, new HelloProcessing());
     }
-
+    public static void bugZap()
+    {
+        String[] a = {"Main"};
+        processing.core.PApplet.runSketch(a, new BugZap());
+    }
     public void cat()
     {
         System.out.println("Hello world");
@@ -33,16 +37,10 @@ public class Main
     }
     public static void main(String[] args)
     {
-<<<<<<< Updated upstream
-        helloProcessing();
+        bugZap();
 
         // Tara Misty
         // Tara Tara
         
     }
-=======
-        // helloProcessing();
-        System.out.println("Alri");
-        }
->>>>>>> Stashed changes
 }
