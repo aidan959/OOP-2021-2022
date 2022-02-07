@@ -4,6 +4,7 @@ import java.util.Vector;
 import ie.tudublin.Menu.MenuChoice;
 import ie.tudublin.Menu.MenuObject;
 import processing.core.PApplet;
+import ie.tudublin.Menu;
 class Coordinate{
     public float x;
     public float y;
@@ -96,84 +97,8 @@ class Player extends Entity
 
     }    
 };
-class Engine
-{
-    Level currentLevel = new Level("map1.map");
-    public void run(){
-        this.loadLevel();
-    }
 
-    public void loadLevel(){
-        this.loadLevel();
-    }
-}
-class Level
-{
-    public Level(String MAP_NAME){
-        load(MAP_NAME);
-    }
-    Coordinate spawnPoint;
-    
-    public void load(String MAP_NAME){
 
-    }
-}
-
-class Menu
-{
-    private int output;
-    private Vector<MenuObject> menuItems;
-    enum MenuChoice{
-        START,
-        CREDITS,
-        QUIT
-    }
-    public Menu(Vector<MenuObject> menuItems){
-        this.menuItems = menuItems;
-    }
-    static class MenuObject{
-        public MenuChoice option;
-        public String menuText;
-        public Coordinate position;
-        public Coordinate bottomRightPosition;
-        public Coordinate size;
-        public Runnable functionToExec;
-        public Boolean selected = false;
-        public MenuObject(MenuChoice option, String menuText, Coordinate position, Coordinate bottomPosition, Coordinate size){
-            this.menuText = menuText;
-            this.position = position;
-            this.bottomRightPosition = bottomPosition;
-            this.option = option;
-            this.size =  size;
-        }
-        static void menuRun(Runnable toRun){
-            toRun.run();
-        }
-        public void clicked(){
-            selected = true;
-        }
-        
-    }
-    public MenuChoice getOutput() throws Exception{
-        for(MenuObject menuObj : menuItems){
-            if(menuObj.selected){
-                return menuObj.option;
-            }
-        }
-        throw new Exception("");
-    }
-    // returns the object - returned when displaying
-    public Vector<MenuObject> returnMenuObjects(){
-        return this.menuItems;
-    }
-
-}
-class Render 
-{
-    public void render(){
-        // hopefully handles rendering shit
-    }
-}
 class RandomNumbers extends PApplet{
 
     public float[] generateUniqueSet(float lowBound, float highBound, int size) {
