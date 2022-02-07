@@ -1,0 +1,9 @@
+{
+    "levelName": "Map One",
+    "author": "Aidan Dowling",
+    "numEnemies":"10",
+    "preSetSpawnList":"0",
+    "spawnList":{
+    },
+    "background-colour":["0","0","0"]
+}
