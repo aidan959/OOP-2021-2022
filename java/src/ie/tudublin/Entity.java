@@ -1,7 +1,8 @@
 package ie.tudublin;
-
+import java.util.Vector;
 class Entity
 {
+    public Vector<Entity> listObjs;
     private Coordinate coordinate;
     public float health;
     public float size = 10;
@@ -10,12 +11,20 @@ class Entity
     public Coordinate screenSize;
     public int WIDTH;
     public int HEIGHT;
-    public Entity(float objX, float objY, float health, int WIDTH, int HEIGHT){
+    public float mass = 1;
+    public Circle model;
+    public HitBox hitbox;
+    public boolean collision_sleeping;
+    // set if the object has already been handled by collision detection
+    public boolean handled;
+    public Entity(float objX, float objY, float health, int WIDTH, int HEIGHT, float radius ){
         coordinate = new Coordinate(objX, objY);
         screenSize = new Coordinate(WIDTH, HEIGHT);
         this.WIDTH = WIDTH;
         this.HEIGHT = HEIGHT;
         this.health = health;
+        model = new Circle(this.getCoord(), radius);
+        hitbox = new HitBox(new Vector<Circle>(1), new Vector<Rectangle>(1));
     }
     public void setX(float x){
         
@@ -40,6 +49,9 @@ class Entity
     public float moveY(float amount){
         setY(coordinate.y + amount);
         return coordinate.y;
+    }
+    public void updateModel(){
+        this.model.points.set(0, this.getCoord());
     }
     public void moveCoord(Coordinate amount){
         this.coordinate = EngineFeatures.addCoordinate(this.coordinate, amount);

@@ -1,8 +1,7 @@
 package ie.tudublin;
 import java.util.Vector;
 import processing.core.PApplet;
-
-
+import java.util.concurrent.*;
 class EngineFeatures{
     static Coordinate addCoordinate(Coordinate a, Coordinate b){
         return new Coordinate(a.x + b.x, a.y + b.y);
@@ -63,7 +62,8 @@ public class BugZap extends PApplet{
         EXIT
     }
     public void drawPlayer(Player player){
-        ellipse(player.getX(), player.getY(), player.size,  (player.size * 2));
+        player.updateModel();
+        ellipse(player.model.points.elementAt(0).x, player.model.points.elementAt(0).y, player.model.radius,  (player.model.radius * 2));
         stroke(0, 255, 0);
         fill(0, 200, 0);
     }
@@ -133,14 +133,26 @@ public class BugZap extends PApplet{
     int rectColor;
     int rectHighlight;
     Physics physics;
-    boolean flipper= false;
+    Thread physicsThread;
+    int physicsTick;
+    int koleadaTick;
+    boolean flipper = false;
+    boolean debugStats = true;
+    Koleada koleada;
+    Thread koleadaThread;
+    Vector<Entity> listObjs = new Vector<Entity>(1);
+    ThreadPoolExecutor executor;
+    Vector<Koleada.Collision> collisions_list = new Vector<Koleada.Collision>();
+    BlockingQueue<Runnable> threadQueue;
+
+    ForkJoinPool forkJoinPool;
     public void generateBugLocations(){
         float[] randomX = randomNumberGen.generateUniqueSet(0, WIDTH, numBugs);
         float[] tempLocationY =  randomNumberGen.generateUniqueSet(0, HEIGHT/2, numBugs);
         
         // spawns d bugs
         for(int i=0; i< numBugs; i++){
-            enemyBugs.addElement(new Bug(new Coordinate(randomX[i], tempLocationY[i]), 100, WIDTH, HEIGHT));
+            enemyBugs.addElement(new Bug(new Coordinate(randomX[i], tempLocationY[i]), 100, WIDTH, HEIGHT, 1));
         }
     }
 
@@ -162,21 +174,33 @@ public class BugZap extends PApplet{
     }
     public void setupGame(){
         
-        player = new Player((float)(WIDTH/2),(float)(HEIGHT/2 + HEIGHT/4), true, 100, WIDTH, HEIGHT);
-        player.size = playerSize;
+        player = new Player((float)(WIDTH/2),(float)(HEIGHT/2 + HEIGHT/4), true, 100, WIDTH, HEIGHT, playerSize*10);
         generateBugLocations();
-        Vector<Entity> listObjs = new Vector<Entity>(1);
+        
         listObjs.add(player);
         for(Bug bug : enemyBugs){
             listObjs.add(bug);
+
         }
-        physics = new Physics(listObjs);
+        koleada = new Koleada(listObjs);
+        physics = new Physics(listObjs, koleada);
+
+
+        physicsTick = 0;
+        koleadaTick = 0;
+        threadQueue = new LinkedBlockingDeque<>(5);
+        executor = (ThreadPoolExecutor) new ThreadPoolExecutor(4, 4, 1, TimeUnit.MILLISECONDS, threadQueue, new ThreadPoolExecutor.AbortPolicy());
+        executor.prestartAllCoreThreads();
+        //forkJoinPool = executor.forkJoinPool;
+        // HandlePhysics handlePhysics = new HandlePhysics();
+        // HandleCollisions handleCollisions = new HandleCollisions();
     }
     public void setup(){
         state = GameState.MENU;
         setupMenu();
     }
     public void draw(){
+        long startTime = System.nanoTime();
         clear();
         switch (state){
             case SPLASH:
@@ -199,27 +223,72 @@ public class BugZap extends PApplet{
                 break;
             
             case RUNNING:
-                background(46, 162, 200);
-                player.takeInputs();
-                physics.calculatePhys();
-                pushMatrix();
-                translate((float)(width*0.5), (float)(height*0.5));
-                // rotate((float)frameCount / (float) -100.0);
-                polygon(0, 0, 10, 20);  // Heptagon
-                popMatrix();
                 
-                if(frameCount % 60 == 0){
-                    flip = !flip;
-                    if(flip){
-                        enemyBugs.get(0).addAcceleration(new Coordinate(random(-4,4), random(-4,4)));
-                    } else{
-                        enemyBugs.get(0).acceleration  = new Coordinate(0, 0);
+                try{
+                    threadQueue.offer(koleada);
+                    threadQueue.offer(physics);
+                } catch (IllegalStateException e){
+                    System.out.println("Thread failed to be added to queue");
+                }
+
+                // Thread koleadaThread = new Thread(){
+                //     public void run(){
+                //         for(Entity obj : listObjs){
+                //             obj.updateModel();
+                //             obj.handled = false;
+                //         }
+                //         koleada.run();
+                
+                //     }
+                // };
+                // Thread physicsThread = new Thread(){
+
+                //     public void run(){
+                //         physics.run();
+                //     }
+                // };
+                //koleadaThread = new Thread(koleada,"Collisions");
+                //physicsThread = new Thread(physics, "Physics");
+
+                //koleada.start();
+                
+                
+                    background(46, 162, 200);
+                    player.takeInputs();
+                    //collisions_list = koleada.detectCollision();
+                    // pushMatrix();
+                    // translate((float)(width*0.5), (float)(height*0.5));
+                    // // rotate((float)frameCount / (float) -100.0);
+                    // polygon(0, 0, 10, 20);  // Heptagon
+                    // popMatrix();
+                    
+                    if(frameCount % 60 == 0){
+                        flip = !flip;
+                        if(flip){
+                            enemyBugs.get(0).addAcceleration(new Coordinate(random(-4,4), random(-4,4)));
+                        } else{
+                            enemyBugs.get(0).acceleration  = new Coordinate(0, 0);
+                        }
                     }
-                }
-                drawPlayer(player);
-                if(enemyBugs.size() > 0){
-                    drawBugs(enemyBugs);
-                }
+                    drawPlayer(player);
+                    if(enemyBugs.size() > 0){
+                        drawBugs(enemyBugs);
+                    }
+                    // try{
+                    //     physicsThread.join();
+                    //     koleadaThread.join();
+                    // } catch(InterruptedException e){
+
+                    // }
+                    if(debugStats){
+                        fill(200);
+                        float frameTime = (System.nanoTime() - startTime) / (float)1000000.0;
+
+                        textSize(10);
+                        text("frame time: " + frameTime + "ms" , 5, 10);  // Text wraps within text box
+                        
+                    }
+
                 
                 break;
             case EXIT:
@@ -267,31 +336,34 @@ public class BugZap extends PApplet{
             if (keyCode == LEFT)
             {
                 player.inputHandle.inputsDown[InputHandler.inputs.LEFT.get()] = true;
-                player.addVelocity(new Coordinate(-1, 0));
+                //player.addVelocity(new Coordinate(-1, 0));
                 //player.addAcceleration(new Coordinate((float) -1, 0));
-                System.out.println("Left arrow pressed");
-                System.out.println(player.getCoord().toString());
+                //System.out.println("Left arrow pressed");
+                //System.out.println(player.getCoord().toString());
             }
             else if(keyCode == RIGHT){
                 //player.addAcceleration(new Coordinate((float)1, 0));;
                 player.inputHandle.inputsDown[InputHandler.inputs.RIGHT.get()] = true;
-                player.addVelocity(new Coordinate(1, 0));
-                System.out.println("Right arrow pressed");
-                System.out.println(player.getCoord().toString());
+               //player.addVelocity(new Coordinate(1, 0));
+                ///System.out.println("Right arrow pressed");
+                //System.out.println(player.getCoord().toString());
             }
             else if(keyCode == UP){
                 player.inputHandle.inputsDown[InputHandler.inputs.UP.get()] = true;
-                player.addVelocity(new Coordinate(0, 1));
+                //player.addVelocity(new Coordinate(0, 1));
 
-                System.out.println("Right arrow pressed");
-                System.out.println(player.acceleration.toString());
+                //System.out.println("Right arrow pressed");
+                //System.out.println(player.acceleration.toString());
             }
             else if(keyCode == DOWN){
                 player.inputHandle.inputsDown[InputHandler.inputs.DOWN.get()] = true;
-                player.addVelocity(new Coordinate(0, -1));
+                //player.addVelocity(new Coordinate(0, -1));
 
-                System.out.println("Right arrow pressed");
-                System.out.println(player.acceleration.toString());
+                //System.out.println("Right arrow pressed");
+                //System.out.println(player.acceleration.toString());
+            }
+            if(key == 'n' ){
+                debugStats = !debugStats;
             }
             if (key == ' ')
             {
