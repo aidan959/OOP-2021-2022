@@ -21,18 +21,24 @@ public class Physics implements Runnable{
     
     public void run(){
 
+        while(!koleada.collisionQueue.isEmpty()){
+            Collision collision = koleada.collisionQueue.poll();
+            if(collision == null){
 
+            } else{
+                collision.from.handled = true;
+                collision.to.handled = true;
+                collision.from.velocity.x = (collision.from.mass * collision.from.velocity.x + collision.to.mass * collision.to.velocity.x)/collision.to.mass + collision.from.mass;
+                collision.from.velocity.y = (collision.from.mass * collision.from.velocity.y + collision.to.mass * collision.to.velocity.y)/collision.to.mass + collision.from.mass;
+                collision.to.collision_sleeping = false;
+                collision.to.velocity.x = (float)1.1 * (collision.to.mass * collision.to.velocity.x + collision.from.mass * collision.from.velocity.x)/collision.to.mass + collision.from.mass;
+                collision.to.velocity.y = (float)1.1 * (collision.to.mass * collision.to.velocity.y + collision.from.mass * collision.from.velocity.y)/collision.to.mass + collision.from.mass;
+                collision.to.acceleration = new Coordinate(0, 0);
+                collision.from.acceleration = new Coordinate(0, 0);
+            }
+        }
             for(Entity obj : listObjs){
-                while(!koleada.collisionQueue.isEmpty()){
-                    Collision collision = koleada.collisionQueue.poll();
-                    collision.from.handled = true;
-                    collision.to.handled = true;
-                    collision.from.velocity.x = (collision.from.mass * collision.from.velocity.x + collision.to.mass * collision.to.velocity.x)/collision.to.mass + collision.from.mass;
-                    collision.from.velocity.y = (collision.from.mass * collision.from.velocity.y + collision.to.mass * collision.to.velocity.y)/collision.to.mass + collision.from.mass;
-                    collision.to.collision_sleeping = false;
-                    collision.to.velocity.x = (float)1.1 * (collision.to.mass * collision.to.velocity.x + collision.from.mass * collision.from.velocity.x)/collision.to.mass + collision.from.mass;
-                    collision.to.velocity.y = (float)1.1 * (collision.to.mass * collision.to.velocity.y + collision.from.mass * collision.from.velocity.y)/collision.to.mass + collision.from.mass;
-                }
+                
                 if(obj.acceleration.hasMagnitude()){
                     // checks if acceleration is      
                     if(Math.abs(obj.acceleration.x) <= 0.01 )

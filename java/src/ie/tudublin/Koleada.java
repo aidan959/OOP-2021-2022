@@ -16,35 +16,40 @@ public class Koleada implements Runnable{
 
     }
     public void run(){
-        
-                for(i = 0; i < detecting.size(); i++){
-                    if(detecting.elementAt(i).collision_sleeping){
-                        // 
-                        for(j=0; j < detecting.size(); j++){
+        for(Entity obj : detecting){
+            obj.updateModel();
+            obj.handled = false;
+        }
+        for(i = 0; i < detecting.size(); i++){
+            if(detecting.elementAt(i).collision_sleeping){
+                // 
+                for(j=0; j < detecting.size(); j++){
 
-                            if(i==j){
+                    if(i==j){
+
+                    } else{
+                        if(detecting.elementAt(i).model instanceof Circle && detecting.elementAt(j).model instanceof Circle ){
+                            if(detecting.elementAt(i).handled){
 
                             } else{
-                                if(detecting.elementAt(i).model instanceof Circle && detecting.elementAt(j).model instanceof Circle ){
-                                    if(detecting.elementAt(i).handled){
+                                if(checkEdges(detecting.elementAt(i).model, detecting.elementAt(j).model)){
+                                    Collision collision = new Collision(detecting.elementAt(i), detecting.elementAt(j));
+                                    if(!collision.to.handled){
+                                        collisionQueue.offer(collision);
+                                    }
 
-                                    } else{
-                                        if(checkEdges(detecting.elementAt(i).model, detecting.elementAt(j).model)){
-                                            Collision collision = new Collision(detecting.elementAt(i), detecting.elementAt(j));
-                                            if(!collision.to.handled){
-                                                collisionQueue.offer(collision);
-                                            }
-
-                                        }
                                 }
-                                }
-                            }
+                        }
                         }
                     }
                 }
-                if(tick++ % 60 == 0){
-                    System.out.println(Thread.currentThread().getName());
-                }
+            }
+        }
+        if(tick++ % 60 == 0){
+            System.out.println("Collision queue");
+        
+            System.out.println(Thread.currentThread().getName());
+        }
     }
     public boolean checkEdges(Circle shape1, Circle shape2){
 
