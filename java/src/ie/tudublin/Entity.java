@@ -3,15 +3,16 @@ import java.util.Vector;
 class Entity
 {
     public Vector<Entity> listObjs;
-    private Coordinate coordinate;
     public float health;
     public float size = 10;
+    // physics info
+    private Coordinate coordinate;
     public Coordinate acceleration = new Coordinate(0, 0);
     public Coordinate velocity = new Coordinate(0, 0);
+    public float mass = 1;
     public Coordinate screenSize;
     public int WIDTH;
     public int HEIGHT;
-    public float mass = 1;
     public Circle model;
     public HitBox hitbox;
     public boolean collision_sleeping;
@@ -61,6 +62,9 @@ class Entity
     }
     public void addVelocity(Coordinate velocity){
         this.velocity = EngineFeatures.addCoordinate(this.velocity, velocity);
+    }
+    public void setCoord(Coordinate coord){
+        this.coordinate = coord;
     }
     public void debugPhys(){
         System.out.println("Player Coords: " + this.coordinate);

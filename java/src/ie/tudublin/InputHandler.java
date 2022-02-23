@@ -5,7 +5,8 @@ public class InputHandler{
         LEFT(0),
         RIGHT(1),
         UP(2),
-        DOWN(3);
+        DOWN(3),
+        SPACE(4);
         private final int value;
         private inputs(int  value){
             this.value = value;
@@ -14,7 +15,7 @@ public class InputHandler{
             return value;
         }
     }
-    public boolean[] inputsDown = {false, false, false, false};
+    public boolean[] inputsDown = {false, false, false, false, false};
     public InputHandler(){
         
     }

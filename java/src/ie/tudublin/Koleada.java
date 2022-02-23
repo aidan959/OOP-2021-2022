@@ -2,54 +2,65 @@ package ie.tudublin;
 import java.util.Vector;
 import java.lang.Runnable;
 import java.util.Queue;
+import java.util.concurrent.*;
+
+import com.jogamp.nativewindow.util.Rectangle;
+
 import java.util.LinkedList;
 public class Koleada implements Runnable{
     public Vector<Entity> detecting;
     public Queue<Collision> collisionQueue = new LinkedList<Collision>();
     int tick=0;
     int i,j;
-
+    public Semaphore entityLock;
     int gameTick=0;
     Vector<Collision> collisions = new Vector<Collision>();
-    public Koleada(Vector<Entity> list){
+    public Koleada(Vector<Entity> list, Semaphore lock){
         detecting = list;
-
+        entityLock = lock;
+        
     }
     public void run(){
-        for(Entity obj : detecting){
-            obj.updateModel();
-            obj.handled = false;
-        }
-        for(i = 0; i < detecting.size(); i++){
-            if(detecting.elementAt(i).collision_sleeping){
-                // 
-                for(j=0; j < detecting.size(); j++){
+        try{
+            entityLock.acquire();
+        
+            for(i = 0; i < detecting.size(); i++){
+                if(detecting.elementAt(i).collision_sleeping){
+                    // 
+                    for(j=0; j < detecting.size(); j++){
 
-                    if(i==j){
+                        if(i==j){
 
-                    } else{
-                        if(detecting.elementAt(i).model instanceof Circle && detecting.elementAt(j).model instanceof Circle ){
-                            if(detecting.elementAt(i).handled){
+                        } else{
+                            if(detecting.elementAt(i).model instanceof Circle && detecting.elementAt(j).model instanceof Circle ){
+                                if(detecting.elementAt(i).handled){
 
-                            } else{
-                                if(checkEdges(detecting.elementAt(i).model, detecting.elementAt(j).model)){
-                                    Collision collision = new Collision(detecting.elementAt(i), detecting.elementAt(j));
-                                    if(!collision.to.handled){
-                                        collisionQueue.offer(collision);
+                                } else{
+                                    if(checkEdges(detecting.elementAt(i).model, detecting.elementAt(j).model)){
+                                        Collision collision = new Collision(detecting.elementAt(i), detecting.elementAt(j));
+                                        if(!collision.to.handled){
+                                            collisionQueue.offer(collision);
+                                        }
+
                                     }
-
-                                }
-                        }
+                            }
+                            }
                         }
                     }
                 }
             }
+            if(tick++ % 60 == 0){
+                System.out.println("Collision queue");
+                
+                System.out.println(Thread.currentThread().getName());
+            }
         }
-        if(tick++ % 60 == 0){
-            System.out.println("Collision queue");
         
-            System.out.println(Thread.currentThread().getName());
+        catch(InterruptedException exc){
+            System.out.println(exc);
         }
+
+        entityLock.release();
     }
     public boolean checkEdges(Circle shape1, Circle shape2){
 
@@ -68,6 +79,7 @@ public class Koleada implements Runnable{
         }
             return false;
     }
+    //public boolean checkEdges(Circle shape1, REct)
     class Collision{
         Entity from;
         Entity to;

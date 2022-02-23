@@ -12,7 +12,6 @@ class EngineFeatures{
 }
 
 class RandomNumbers extends PApplet{
-
     public float[] generateUniqueSet(float lowBound, float highBound, int size) {
         boolean passTest = false;
         float[] output = new float[size];
@@ -63,15 +62,21 @@ public class BugZap extends PApplet{
     }
     public void drawPlayer(Player player){
         player.updateModel();
-        ellipse(player.model.points.elementAt(0).x, player.model.points.elementAt(0).y, player.model.radius,  (player.model.radius * 2));
         stroke(0, 255, 0);
         fill(0, 200, 0);
+        ellipse(player.model.points.elementAt(0).x, player.model.points.elementAt(0).y, player.model.radius,  (player.model.radius * 2));
+    }
+
+    public void drawProjectile(Projectile projectile){
+        stroke( 0,255,0);
+        fill(0,200,0);
+        ellipse(projectile.getX(), projectile.getY(), 4, 3);
     }
 
     public void drawBug(Bug bug){
-        ellipse(bug.getX(), bug.getY(), bug.size, bug.size);
         stroke(255, 0 , 0);
         fill(200,0, 0);
+        ellipse(bug.getX(), bug.getY(), bug.size, bug.size);
     }
     public void drawBugs(Vector<Bug> bugs){
         for(Bug bug : bugs){
@@ -112,10 +117,10 @@ public class BugZap extends PApplet{
     public void drawButton(Menu.MenuObject menuObj){
 
     }
-    public void playerFire(Player player, float lW){
-        line(player.getX(), player.getY(), player.getX(), player.getY() - HEIGHT);
-        stroke(255,255,255);
-        fill(255,255,255);
+    public void playerFire(Player player){
+        if(projectiles.size() < projectileLimit ){
+            projectiles.add(player.fire(mouseX, mouseY, 0.5f));
+        }
     }
     public void settings(){
         size(WIDTH,HEIGHT);
@@ -123,8 +128,10 @@ public class BugZap extends PApplet{
     int playerSize = 10;
     int bugSize = 1;
     int numBugs = 10;
+    int projectileLimit = 10;
     Vector<Bug> enemyBugs = new Vector<Bug>(numBugs);
     Vector<Coordinate> bugLocations = new Vector<Coordinate>(numBugs);
+    Vector<Projectile> projectiles = new Vector<Projectile>(projectileLimit);
     RandomNumbers randomNumberGen = new RandomNumbers();
     int frameLoop = 300;
     Player player;
@@ -133,18 +140,15 @@ public class BugZap extends PApplet{
     int rectColor;
     int rectHighlight;
     Physics physics;
-    Thread physicsThread;
-    int physicsTick;
-    int koleadaTick;
     boolean flipper = false;
     boolean debugStats = true;
     Koleada koleada;
-    Thread koleadaThread;
     Vector<Entity> listObjs = new Vector<Entity>(1);
     ThreadPoolExecutor executor;
     Vector<Koleada.Collision> collisions_list = new Vector<Koleada.Collision>();
     BlockingQueue<Runnable> threadQueue;
-
+    Semaphore entityListLock = new Semaphore(1);
+    float frameTime;
     ForkJoinPool forkJoinPool;
     public void generateBugLocations(){
         float[] randomX = randomNumberGen.generateUniqueSet(0, WIDTH, numBugs);
@@ -158,7 +162,7 @@ public class BugZap extends PApplet{
 
     public void setupMenu(){
         // button coords
-        Coordinate buttonSize = new Coordinate(2*WIDTH/3, HEIGHT/6);
+        Coordinate buttonSize = new Coordinate((2*WIDTH)/3, HEIGHT/6);
         Coordinate startBtnCoord = new Coordinate(WIDTH / 6, HEIGHT/16);
         Coordinate quitBtnCoord = new Coordinate(WIDTH / 6, buttonSize.y + startBtnCoord.y + HEIGHT/6);
         Coordinate creditBtnCoord  = new Coordinate(WIDTH / 6, buttonSize.y + quitBtnCoord.y + HEIGHT/6);
@@ -172,24 +176,29 @@ public class BugZap extends PApplet{
         menu.createMenuObject(Menu.MenuChoice.CREDITS, "Credits", creditBtnCoord, buttonSize);
 
     }
+    // initializes game options
     public void setupGame(){
-        
+        // creates our player
         player = new Player((float)(WIDTH/2),(float)(HEIGHT/2 + HEIGHT/4), true, 100, WIDTH, HEIGHT, playerSize*10);
+        
+        // generates bugs and random locations
         generateBugLocations();
         
+        // adds new object to the list of objects
         listObjs.add(player);
         for(Bug bug : enemyBugs){
             listObjs.add(bug);
-
         }
-        koleada = new Koleada(listObjs);
+
+
+        // initializes collision enginer
+        koleada = new Koleada(listObjs, entityListLock);
+        // passes koleada to physics engine and initializes it
         physics = new Physics(listObjs, koleada);
 
-
-        physicsTick = 0;
-        koleadaTick = 0;
         threadQueue = new LinkedBlockingDeque<>(5);
-        executor = (ThreadPoolExecutor) new ThreadPoolExecutor(4, 4, 1, TimeUnit.MILLISECONDS, threadQueue, new ThreadPoolExecutor.AbortPolicy());
+        // MAKE SURE TO INCREASE THIS TO MATCH THE NUMBER OF THREADS
+        executor = (ThreadPoolExecutor) new ThreadPoolExecutor(2, 2, 1, TimeUnit.MILLISECONDS, threadQueue, new ThreadPoolExecutor.AbortPolicy());
         executor.prestartAllCoreThreads();
         //forkJoinPool = executor.forkJoinPool;
         // HandlePhysics handlePhysics = new HandlePhysics();
@@ -199,7 +208,14 @@ public class BugZap extends PApplet{
         state = GameState.MENU;
         setupMenu();
     }
-    public void draw(){
+    // TODO check all things in here are being created and recycled before creation
+    // ALL USES
+    public void draw(){ 
+        Grass grass = new Grass();
+        grass.animate(frameCount);
+        if (grass.currentState == Grass.state.LEFT){
+
+        }
         long startTime = System.nanoTime();
         clear();
         switch (state){
@@ -253,41 +269,61 @@ public class BugZap extends PApplet{
                 //koleada.start();
                 
                 
-                    background(46, 162, 200);
-                    player.takeInputs();
-                    //collisions_list = koleada.detectCollision();
-                    // pushMatrix();
-                    // translate((float)(width*0.5), (float)(height*0.5));
-                    // // rotate((float)frameCount / (float) -100.0);
-                    // polygon(0, 0, 10, 20);  // Heptagon
-                    // popMatrix();
+                background(46, 162, 200);
+                player.takeInputs(frameCount);
+                //collisions_list = koleada.detectCollision();
+                // pushMatrix();
+                // translate((float)(width*0.5), (float)(height*0.5));
+                // // rotate((float)frameCount / (float) -100.0);
+                // polygon(0, 0, 10, 20);  // Heptagon
+                // popMatrix();
+                // randomly adds acceleration to d bugs
+                if(frameCount % 60 == 0){
+                    flip = !flip;
+                    if(flip){
+                        enemyBugs.get(0).acceleration.x = random(-4,4);
+                        enemyBugs.get(0).acceleration.y = random(-4,4);
+                    } else{
+                        enemyBugs.get(0).acceleration.clear();
+                    }
+                }
+                // TODO - change this to something that checks if listObjs is > 0
+                // if it is then we draw each using their own element
+                // add something like entity.draw();
+                // or a rendering engine which takes the entity and draws it to the screen
+                // rendering.draw(entity); 
+                // draws le player
+                drawPlayer(player);
+                // checks if there are any bugs alive
+                if(enemyBugs.size() > 0){
+                    drawBugs(enemyBugs);
+                }
+                for(Projectile projectile : projectiles){
+                    drawProjectile(projectile);
+                }
+                // try{
+                //     physicsThread.join();
+                //     koleadaThread.join();
+                // } catch(InterruptedException e){
+
+                // }
+                // checks if its were debugging
+                if(debugStats){
+                    fill(200);
+                    frameTime = (System.nanoTime() - startTime) / (float)1000000.0;
+
+                    textSize(10);
+                    text("frame time: " + frameTime + "ms" , 5, 10);  // Text wraps within text box
                     
-                    if(frameCount % 60 == 0){
-                        flip = !flip;
-                        if(flip){
-                            enemyBugs.get(0).addAcceleration(new Coordinate(random(-4,4), random(-4,4)));
-                        } else{
-                            enemyBugs.get(0).acceleration  = new Coordinate(0, 0);
-                        }
-                    }
-                    drawPlayer(player);
-                    if(enemyBugs.size() > 0){
-                        drawBugs(enemyBugs);
-                    }
-                    // try{
-                    //     physicsThread.join();
-                    //     koleadaThread.join();
-                    // } catch(InterruptedException e){
-
-                    // }
-                    if(debugStats){
-                        fill(200);
-                        float frameTime = (System.nanoTime() - startTime) / (float)1000000.0;
-
-                        textSize(10);
-                        text("frame time: " + frameTime + "ms" , 5, 10);  // Text wraps within text box
-                        
-                    }
+                }
+                try{
+                    entityListLock.acquire();
+                }
+                catch(InterruptedException exc){
+                    System.out.println(exc);
+                }
+                entityListLock.release();
+                
 
                 
                 break;
@@ -362,20 +398,21 @@ public class BugZap extends PApplet{
                 //System.out.println("Right arrow pressed");
                 //System.out.println(player.acceleration.toString());
             }
-            if(key == 'n' ){
+            else if(key == 'n' ){
                 debugStats = !debugStats;
             }
-            if (key == ' ')
+            else if (key == ' ')
             {
-                playerFire(player, 10);
+                playerFire(player);
+                player.inputHandle.inputsDown[InputHandler.inputs.SPACE.get()] = true;
                 player.debugPhys();
                 System.out.println("SPACE key pressed");
             }
-            if(keyCode == ESC){
+            else if(keyCode == ESC){
                 key = 0;
                 state = GameState.MENU;
             }
-            if(key == 'c'){
+            else if(key == 'c'){
                 for(Bug bug: enemyBugs)
                     bug.moveBugX(1);
             }
